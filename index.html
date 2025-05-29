@@ -1,0 +1,231 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn APA: The Platform Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 10px; background-color: #e0f7fa; }
+        .game-page-title {
+            font-size: 2em;
+            color: #004d40;
+            margin-bottom: 5px;
+        }
+        /* REMOVED .game-author and .game-course-info styles */
+
+        /* ADDED new styles for game-credits */
+        .game-credits {
+          font-size: 0.95rem;     /* smaller than the main heading */
+          line-height: 1.4;       /* tight but readable */
+          color: #004d40;         /* same teal family as the title */
+          margin: 4px 0 14px;     /* trim top margin, add a bit below */
+          text-align: center;     /* keep it centred under the title */
+        }
+        .game-credits .course-code,
+        .game-credits .assessment {
+          font-weight: 600;       /* medium weight for the extras */
+        }
+
+        #game-container { display: flex; flex-direction: column; align-items: center; margin-top: 10px;}
+        #game-area {
+            width: 700px; height: 400px; border: 2px solid #00796b;
+            background-color: #80deea; position: relative; overflow: hidden;
+        }
+        .game-object { position: absolute; box-sizing: border-box; }
+        #player {
+            width: 30px; height: 20px; background-color: #1e88e5;
+            border: 1px solid #0d47a1;
+        }
+        #player::before { /* Player's "head" part */
+            content: ''; position: absolute; width: 100%; height: 12px;
+            border: 1px solid #b71c1c; box-sizing: border-box; left: 0px;
+            bottom: 20px; border-radius: 4px 4px 0 0;
+            background: radial-gradient(circle at 7px 5px, white 1.5px, transparent 1.51px),
+                        radial-gradient(circle at calc(100% - 7px) 5px, white 1.5px, transparent 1.51px),
+                        #e53935;
+            background-repeat: no-repeat;
+        }
+        #ground-container { bottom: 0; left: 0; height: 50px; width: 100%; position:absolute; }
+        .ground-segment { height: 100%; background-color: #4caf50; position: absolute; bottom: 0; left: 0;}
+        .block {
+            width: 40px; height: 40px; background-color: #f44336; border: 2px solid #b71c1c;
+            display: flex; align-items: center; justify-content: center; font-size: 1.5em;
+            color: white; /* Default color for '?' */
+            font-weight: bold; user-select: none;
+        }
+        .block.hit {
+            border-color: #424242;
+        }
+        .block.correct {
+          background-color: #C8E6C9;  /* light green */
+          border-color:   #388E3C;    /* dark green */
+        }
+        .block.incorrect {
+          background-color: #FFCDD2;  /* light red */
+          border-color:   #C62828;    /* dark red */
+        }
+        .correct-tick {
+            color: #2E7D32 !important;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 1.3em;
+            line-height: 1;
+        }
+        .incorrect-cross {
+            color: #B71C1C !important;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 1.3em;
+            line-height: 1;
+            font-weight: bold;
+        }
+        .enemy {
+            width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+            font-size: 28px; line-height: 1; color: #000;
+        }
+        #portal {
+            width: 50px; height: 80px; background-color: #00bcd4; border: 3px dashed #006064;
+            border-radius: 50% / 25%; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.8em; text-align: center; box-shadow: 0 0 15px #00bcd4;
+        }
+        .comet {
+            width: 25px;
+            height: 25px;
+            font-size: 20px;
+            color: #FFF;
+            text-shadow: 0 0 5px #FFA500, 0 0 10px #FF8C00;
+            display: none;
+            z-index: 5;
+        }
+        #quiz-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
+            z-index: 100;
+        }
+        #quiz-overlay.show {
+            opacity: 1;
+            visibility: visible;
+            transition-delay: 0s;
+        }
+        #quiz-box {
+            background-color: white; padding: 25px; border-radius: 10px; text-align: center;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 320px;
+            transition: transform 0.3s ease-out 0.1s;
+            transform: translateY(20px);
+        }
+        #quiz-overlay.show #quiz-box {
+            transform: translateY(0);
+        }
+        #quiz-box p { margin-bottom: 15px; font-size: 1.1em;}
+        #quiz-box button {
+            display: block; width: calc(100% - 10px); padding: 10px 15px; margin: 8px auto;
+            cursor: pointer; background-color: #007bff; color: white; border: none;
+            border-radius: 5px; font-size: 1em;
+        }
+        #quiz-box button:hover { background-color: #0056b3; }
+        #quiz-box button:disabled { background-color: #5a8fc7; cursor: not-allowed; opacity: 0.7;}
+        #quiz-feedback { margin-top:10px; font-style: italic; min-height: 1.2em;}
+        #level-display, #alien-score-display, #correct-answers-display {
+            margin-top: 5px; margin-bottom: 5px; font-size: 1.1em; color: #004d40; text-align: center;
+        }
+        #instructions { margin-bottom: 5px; font-size: 0.9em; color: #333; text-align: center; min-height: 2.2em; }
+
+        #final-score-summary {
+            margin-top: 15px; white-space: normal; padding: 15px;
+            border: 2px solid #004d40; border-radius: 8px;
+            background-color: #e6fffa; text-align: center;
+            max-width: 450px; line-height: 1.6;
+        }
+        .final-score-title {
+            font-size: 1.6em; margin-bottom: 15px; color: #004d40; font-weight: bold;
+        }
+        .final-score-heading {
+            font-size: 1.2em; margin-top: 10px; margin-bottom: 8px;
+            color: #00695c; text-decoration: underline;
+        }
+        .final-score-level-line { margin-bottom: 6px; font-size: 1.1em; }
+        .final-score-level-questions { font-weight: bold; color: #00796b; }
+        .final-score-level-aliens { font-size: 0.9em; color: #546e7a; }
+        .final-score-total-heading {
+            font-size: 1.3em; margin-top: 20px; margin-bottom: 8px;
+            color: #004d40; font-weight: bold;
+        }
+        .final-score-total-questions {
+            font-size: 1.8em; color: #00796b; display: block;
+            margin-bottom: 5px; font-weight: bold;
+        }
+        .final-score-total-aliens-secondary {
+            font-size: 1em; color: #757575; font-style: italic;
+        }
+        .message-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3); text-align: center; z-index: 101;
+            display: none; border: 1px solid #ccc;
+        }
+        .message-overlay p { margin-bottom: 15px; line-height: 1.4; }
+        .message-overlay button { margin: 5px; padding: 8px 15px; cursor: pointer; border-radius: 4px; border: 1px solid #777; }
+        .message-overlay button:hover { background-color: #eee; }
+    </style></head><body>
+    <h1 class="game-page-title">Learn APA: The Platform Game</h1>
+    <p class="game-credits">
+      <strong>Rohan Gadde</strong> &middot;
+      <span class="course-code">EDU1003</span> &middot;
+      <span class="assessment">Assessment 2 – Gamification Activity</span>
+    </p>
+
+    <div id="game-container">
+        <div id="instructions"></div>
+        <div id="level-display">Level: 1</div>
+        <div id="correct-answers-display">Questions Right: 0 / 0</div>
+        <div id="alien-score-display">Aliens Squashed: 0</div>
+        <div id="game-area">
+            <div id="player" class="game-object"></div>
+            <div id="ground-container" class="game-object">
+                <div class="ground-segment"></div>
+            </div>
+            <div class="game-object block" id="block-1">?</div> <div class="game-object block" id="block-2">?</div>
+            <div class="game-object block" id="block-3">?</div> <div class="game-object block" id="block-4">?</div>
+            <div class="game-object block" id="block-5">?</div> <div class="game-object block" id="block-6">?</div>
+            <div class="game-object block" id="block-7">?</div> <div class="game-object block" id="block-8">?</div>
+
+            <div class="game-object enemy" id="enemy-1">👾</div> <div class="game-object enemy" id="enemy-2">👾</div>
+            <div class="game-object enemy" id="enemy-3">👾</div> <div class="game-object enemy" id="enemy-4">👾</div>
+            <div class="game-object enemy" id="enemy-5">👾</div> <div class="game-object enemy" id="enemy-6">👾</div>
+
+            <div class="game-object comet" id="comet-1">☄️</div>
+            <div class="game-object comet" id="comet-2">☄️</div>
+            <div class="game-object comet" id="comet-3">☄️</div>
+            <div class="game-object comet" id="comet-4">☄️</div>
+
+            <div class="game-object" id="portal">Portal</div>
+
+            <div id="level-transition-message-overlay" class="message-overlay">
+                <p id="level-transition-message-text"></p>
+                <button id="proceed-button">Continue</button>
+            </div>
+            <div id="retry-message-overlay" class="message-overlay">
+                <p id="retry-message-text"></p>
+                <button id="retry-level-button">Retry Level</button>
+                <button id="restart-game-button">Restart Game (from Lvl 1)</button>
+            </div>
+        </div>
+        <div id="final-score-summary" style="display:none;"></div>
+    </div>
+
+    <div id="quiz-overlay">
+        <div id="quiz-box">
+            <p id="quiz-question-text"></p>
+            <div id="quiz-options"></div>
+            <p id="quiz-feedback"></p>
+        </div>
+    </div>
+
+    <script type="module" src="./levels.js"></script>
+    <script type="module" src="./ui.js"></script>
+    <script type="module" src="./engine.js"></script></body></html>
